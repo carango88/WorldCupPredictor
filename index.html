@@ -206,71 +206,72 @@
   .champ-box:not(.on) .cb-team{color:var(--muted);font-weight:500}
   .third-block .blabel{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
     text-align:center;margin-bottom:5px;font-weight:600}
-  /* print / PDF report (hidden on screen) */
+  /* print / PDF report — hidden on screen; shown for window.print() and (off-screen) for one-click PDF capture */
   #printArea{display:none}
+  #printArea.show{display:block;position:fixed;left:-10000px;top:0;width:760px;background:#fff;color:#111;padding:18px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+  #printArea,#printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pr-head{border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:14px}
+  .pr-head h1{margin:0;font-size:20px}
+  .pr-sub{font-size:12px;color:#555;margin-top:3px}
+  #printArea h2{font-size:15px;margin:18px 0 8px;border-bottom:1px solid #999;padding-bottom:3px;color:#111}
+  #printArea h3{font-size:12px;margin:0 0 4px;color:#111}
+  #printArea h4{font-size:12px;margin:10px 0 4px;color:#444}
+  .pr-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+  .pr-group{break-inside:avoid;page-break-inside:avoid}
+  #printArea table{width:100%;border-collapse:collapse;font-size:10px;color:#111}
+  #printArea th,#printArea td{border:1px solid #ccc;padding:2px 4px;text-align:center}
+  #printArea td.tl,#printArea th.tl{text-align:left;white-space:nowrap}
+  #printArea tr.q{background:#e9f7ef;font-weight:600}
+  .pr-line{margin:1px 0;break-inside:avoid}
+  .pr-rgroups{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 20px;margin-top:4px}
+  .pr-rgroup{break-inside:avoid;page-break-inside:avoid}
+  .pr-rgroup .pr-line{font-size:9.5px;margin:1.5px 0;color:#222;display:flex;align-items:baseline;gap:6px}
+  .pr-rgroup .pr-line .mu{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-rgroup .pr-line .d{color:#999;font-size:8.5px;margin-right:2px}
+  .pr-rgroup .pr-line .w{font-weight:700}
+  .pr-rgroup .pr-line b{margin:0 2px}
+  .pr-rgroup .pr-line .rcode{flex-shrink:0;font-weight:700;color:#1f7a4d;font-size:9px;
+    letter-spacing:.3px;min-width:30px;text-align:right;border-left:1px solid #ddd;padding-left:6px}
+  .pr-rgroup .pr-line .rcode.tie{color:#aaa}
+  .pr-koround{break-inside:avoid;page-break-inside:avoid;margin-bottom:6px}
+  .pr-ko{font-size:11px;margin:2px 0;padding:2px 0;border-bottom:1px dotted #ddd;color:#111}
+  .pr-ko .w{font-weight:700}
+  .pr-ko .mn{color:#999;font-size:9px}
+  .pr-ko .tbd{color:#999;font-style:italic}
+  .pr-champ{margin-top:10px;font-size:14px;font-weight:700}
+  .pr-cols{columns:2;column-gap:20px}
+  /* advancing-by-round: each round a full-width block, teams in a 4-across grid (fits long names, never split mid-team) */
+  .pr-advrow{margin-bottom:9px;break-inside:avoid;page-break-inside:avoid}
+  .pr-advrow h4{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #ddd;padding-bottom:2px}
+  .pr-advrow .cnt{font-size:8.5px;color:#999;font-weight:400}
+  .pr-advgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px 16px;font-size:9.5px;line-height:1.5}
+  .pr-advgrid>div{break-inside:avoid;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr-advgrid .an{display:inline-block;min-width:16px;color:#aaa}
+  .pr-advrow .tbd{color:#999;font-style:italic;font-size:9.5px}
+  .pr-standings{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:10px;font-size:12px}
+  .pr-standings .gold{color:#8a7000;font-weight:700}
+  /* drawn bracket */
+  .pr-bracket{break-inside:avoid;page-break-inside:avoid}
+  .pb-wrap{display:flex;gap:30px;align-items:stretch;margin-top:4px}
+  .pb-col{display:flex;flex-direction:column;flex:1;min-width:0}
+  .pb-ct{font-size:8px;text-transform:uppercase;letter-spacing:.3px;color:#777;text-align:center;font-weight:700;height:13px;white-space:nowrap}
+  .pb-body{display:flex;flex-direction:column;justify-content:space-around}
+  .pb-cell{position:relative;border:1px solid #b5b5b5;border-radius:4px;background:#fff}
+  .pb-row{display:flex;justify-content:space-between;align-items:center;gap:3px;padding:2px 5px;font-size:9px;color:#111}
+  .pb-row+.pb-row{border-top:1px solid #ddd}
+  .pb-row.w{background:#e9f7ef;font-weight:700}
+  .pb-tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pb-sc{font-weight:700;flex-shrink:0}
+  .pb-col:not(:last-child) .pb-cell::after{content:"";position:absolute;top:50%;left:100%;width:15px;height:1px;background:#b5b5b5}
+  .pb-col.in .pbc{position:absolute;right:100%;top:50%;transform:translateY(-50%);width:15px;border-left:1px solid #b5b5b5}
+  .pb-col.in .pbc::after{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:#b5b5b5}
+  .pb-foot{margin-top:8px;font-size:9px;color:#555}
   @media print{
     @page{margin:11mm;size:portrait}
     html,body{background:#fff !important;color:#111 !important}
     header,#subtabs,#content,footer{display:none !important}
-    #printArea{display:block !important}
-    .pr-head{border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:14px}
-    .pr-head h1{margin:0;font-size:20px}
-    .pr-sub{font-size:12px;color:#555;margin-top:3px}
-    #printArea h2{font-size:15px;margin:18px 0 8px;border-bottom:1px solid #999;padding-bottom:3px}
-    #printArea h3{font-size:12px;margin:0 0 4px}
-    #printArea h4{font-size:12px;margin:10px 0 4px;color:#444}
-    .pr-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
-    .pr-group{break-inside:avoid;page-break-inside:avoid}
-    #printArea table{width:100%;border-collapse:collapse;font-size:10px}
-    #printArea th,#printArea td{border:1px solid #ccc;padding:2px 4px;text-align:center}
-    #printArea td.tl,#printArea th.tl{text-align:left;white-space:nowrap}
-    #printArea tr.q{background:#e9f7ef;font-weight:600}
-    .pr-line{margin:1px 0;break-inside:avoid}
-    .pr-rgroups{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 20px;margin-top:4px}
-    .pr-rgroup{break-inside:avoid;page-break-inside:avoid}
-    .pr-rgroup .pr-line{font-size:9.5px;margin:1.5px 0;color:#222;display:flex;align-items:baseline;gap:6px}
-    .pr-rgroup .pr-line .mu{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .pr-rgroup .pr-line .d{color:#999;font-size:8.5px;margin-right:2px}
-    .pr-rgroup .pr-line .w{font-weight:700}
-    .pr-rgroup .pr-line b{margin:0 2px}
-    .pr-rgroup .pr-line .rcode{flex-shrink:0;font-weight:700;color:#1f7a4d;font-size:9px;
-      letter-spacing:.3px;min-width:30px;text-align:right;border-left:1px solid #ddd;padding-left:6px}
-    .pr-rgroup .pr-line .rcode.tie{color:#aaa}
-    .pr-koround{break-inside:avoid;page-break-inside:avoid;margin-bottom:6px}
-    .pr-ko{font-size:11px;margin:2px 0;padding:2px 0;border-bottom:1px dotted #ddd}
-    .pr-ko .w{font-weight:700}
-    .pr-ko .mn{color:#999;font-size:9px}
-    .pr-ko .tbd{color:#999;font-style:italic}
-    .pr-champ{margin-top:10px;font-size:14px;font-weight:700}
-    .pr-cols{columns:2;column-gap:20px}
-    /* advancing-by-round lists + final standings */
-    .pr-adv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px}
-    .pr-advcol{break-inside:avoid}
-    .pr-advcol h4{margin:0 0 3px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #ddd;padding-bottom:2px}
-    .pr-advcol .cnt{font-size:8.5px;color:#999;font-weight:400}
-    .pr-advlist{font-size:9px;line-height:1.45;columns:2;column-gap:10px}
-    .pr-advlist>div{break-inside:avoid}
-    .pr-advlist .an{display:inline-block;min-width:14px;color:#aaa}
-    .pr-advlist .tbd{color:#999;font-style:italic;columns:1}
-    .pr-standings{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:10px;font-size:12px}
-    .pr-standings .gold{color:#8a7000;font-weight:700}
-    /* drawn bracket */
-    .pr-bracket{break-inside:avoid;page-break-inside:avoid;break-before:page;page-break-before:always}
-    .pb-wrap{display:flex;gap:30px;align-items:stretch;margin-top:4px}
-    .pb-col{display:flex;flex-direction:column;flex:1;min-width:0}
-    .pb-ct{font-size:8px;text-transform:uppercase;letter-spacing:.3px;color:#777;text-align:center;font-weight:700;height:13px;white-space:nowrap}
-    .pb-body{display:flex;flex-direction:column;justify-content:space-around}
-    .pb-cell{position:relative;border:1px solid #b5b5b5;border-radius:4px;background:#fff}
-    .pb-row{display:flex;justify-content:space-between;align-items:center;gap:3px;padding:2px 5px;font-size:9px}
-    .pb-row+.pb-row{border-top:1px solid #ddd}
-    .pb-row.w{background:#e9f7ef;font-weight:700}
-    .pb-tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .pb-sc{font-weight:700;flex-shrink:0}
-    .pb-col:not(:last-child) .pb-cell::after{content:"";position:absolute;top:50%;left:100%;width:15px;height:1px;background:#b5b5b5}
-    .pb-col.in .pbc{position:absolute;right:100%;top:50%;transform:translateY(-50%);width:15px;border-left:1px solid #b5b5b5}
-    .pb-col.in .pbc::after{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:#b5b5b5}
-    .pb-foot{margin-top:8px;font-size:9px;color:#555}
-    #printArea,#printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    #printArea{display:block !important;position:static !important;left:auto !important;top:auto !important;width:auto !important;padding:0 !important}
+    .pr-bracket{break-before:page;page-break-before:always}
   }
 </style>
 </head>
@@ -286,7 +287,7 @@
       <button data-view="advancing">🚩 Advancing</button>
       <button data-view="goals">⚽ Goals</button>
     </div>
-    <button class="primary" id="pdfBtn">🖨 Save PDF</button>
+    <button class="primary" id="pdfBtn" title="Download a PDF of your full prediction">⬇ Download PDF</button>
     <button class="danger" id="clearBtn">✕ Clear all</button>
   </div>
   <div class="legend">
@@ -1556,7 +1557,7 @@ function buildPrintReport(){
   const advQF=r16o.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
   const advSF=qfo.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
   const fRunner=res[104]&&res[104].loser, fThird=res[103]&&res[103].winner, fFourth=res[103]&&res[103].loser;
-  const advCol=(title,a,n)=>`<div class="pr-advcol"><h4>${title} <span class="cnt">${a.length}/${n}</span></h4><div class="pr-advlist">${a.length?a.map((t,i)=>`<div><span class="an">${i+1}</span>${t}</div>`).join(""):'<div class="tbd">Not decided yet</div>'}</div></div>`;
+  const advCol=(title,a,n)=>`<div class="pr-advrow"><h4>${title} <span class="cnt">${a.length}/${n}</span></h4>${a.length?`<div class="pr-advgrid">${a.map((t,i)=>`<div><span class="an">${i+1}</span>${t}</div>`).join("")}</div>`:'<div class="tbd">Not decided yet</div>'}</div>`;
   const advHtml=`<div class="pr-adv">
       ${advCol("Round of 32",advR32,32)}${advCol("Round of 16",advR16,16)}${advCol("Quarter-finals",advQF,8)}${advCol("Semi-finals",advSF,4)}
     </div>
@@ -1586,25 +1587,82 @@ function buildPrintReport(){
     <div class="pb-foot">🏆 Champion: <b>${champ||"—"}</b> &nbsp;·&nbsp; 🥉 Third place (M103 winner): <b>${fThird||"—"}</b> &nbsp;·&nbsp; ᴾ = won on penalties · codes are FIFA 3-letter</div></div>`;
 
   const done=MATCHES.filter(m=>getScore(m.id)).length;
-  return `<div class="pr-head">
+  return `<div class="pdf-block pr-head">
       <h1>⚽ FIFA World Cup 2026 — My Prediction</h1>
       <div class="pr-sub">Generated ${dateStr} · ${done}/72 group matches entered${champ?` · 🏆 Champion: <b>${champ}</b>`:""}</div>
     </div>
-    <h2>Group Standings</h2>
-    <div class="pr-groups">${groupsHtml}</div>
-    <div style="font-size:10px;color:#666;margin-top:6px">✓ = top-2 (advance) · ③ = 3rd place qualifying among best 8</div>
-    <h2>Group Stage Results</h2>
-    <div class="pr-rgroups">${resultsHtml}</div>
-    <h2>Best 3rd-placed Teams</h2>${thirdsTable}
-    <h2>Teams Advancing by Round</h2>${advHtml}
-    <h2>Knockout Bracket</h2>${bracketHtml}
-    <h2>Knockout Results</h2>${koHtml}
-    ${champ?`<div class="pr-champ">🏆 Predicted Champion: ${champ}</div>`:""}`;
+    <div class="pdf-block">
+      <h2>Group Standings</h2>
+      <div class="pr-groups">${groupsHtml}</div>
+      <div style="font-size:10px;color:#666;margin-top:6px">✓ = top-2 (advance) · ③ = 3rd place qualifying among best 8</div>
+    </div>
+    <div class="pdf-block"><h2>Group Stage Results</h2><div class="pr-rgroups">${resultsHtml}</div></div>
+    <div class="pdf-block"><h2>Best 3rd-placed Teams</h2>${thirdsTable}</div>
+    <div class="pdf-block"><h2>Teams Advancing by Round</h2>${advHtml}</div>
+    <div class="pdf-block"><h2>Knockout Bracket</h2>${bracketHtml}</div>
+    <div class="pdf-block"><h2>Knockout Results</h2>${koHtml}${champ?`<div class="pr-champ">🏆 Predicted Champion: ${champ}</div>`:""}</div>`;
 }
 
-function savePDF(){
+// fallback: the classic print-dialog route ("Save as PDF" inside the dialog)
+function printPDF(){
   document.getElementById("printArea").innerHTML=buildPrintReport();
   window.print();
+}
+// lazy-load an external script once
+function loadScript(src,ready){
+  return new Promise((res,rej)=>{
+    if(ready())return res();
+    const s=document.createElement("script");s.src=src;
+    s.onload=()=>ready()?res():rej(new Error("unavailable"));
+    s.onerror=()=>rej(new Error("load failed: "+src));
+    document.head.appendChild(s);
+  });
+}
+// one-click: render the report off-screen, rasterize block-by-block, assemble a downloadable PDF
+async function savePDF(){
+  const btn=document.getElementById("pdfBtn"), label=btn.textContent;
+  btn.disabled=true; btn.textContent="⏳ Building PDF…";
+  const area=document.getElementById("printArea");
+  try{
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>window.html2canvas);
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>window.jspdf&&window.jspdf.jsPDF);
+    area.innerHTML=buildPrintReport();
+    area.classList.add("show");
+    await new Promise(r=>setTimeout(r,80)); // let layout/fonts settle
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF("p","pt","letter");
+    const pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+    const margin=28, usableW=pageW-2*margin, usableH=pageH-2*margin;
+    let y=margin;
+    for(const block of area.querySelectorAll(".pdf-block")){
+      const canvas=await window.html2canvas(block,{scale:2,backgroundColor:"#ffffff",logging:false,useCORS:true});
+      const h=canvas.height*usableW/canvas.width;
+      if(h<=usableH){
+        if(y>margin && y+h>pageH-margin){ pdf.addPage(); y=margin; }
+        pdf.addImage(canvas.toDataURL("image/jpeg",0.93),"JPEG",margin,y,usableW,h); y+=h+12;
+      }else{ // block taller than a page: slice it across pages
+        if(y>margin){ pdf.addPage(); y=margin; }
+        const slicePx=Math.floor(canvas.width*usableH/usableW);
+        let off=0;
+        while(off<canvas.height){
+          const sh=Math.min(slicePx,canvas.height-off);
+          const tmp=document.createElement("canvas"); tmp.width=canvas.width; tmp.height=sh;
+          tmp.getContext("2d").drawImage(canvas,0,off,canvas.width,sh,0,0,canvas.width,sh);
+          if(off>0) pdf.addPage();
+          pdf.addImage(tmp.toDataURL("image/jpeg",0.93),"JPEG",margin,margin,usableW,sh*usableW/canvas.width);
+          off+=sh;
+        }
+        y=pageH; // next block starts a fresh page
+      }
+    }
+    pdf.save("WorldCup2026-Prediction.pdf");
+  }catch(e){
+    // offline or library blocked → fall back to the browser print→"Save as PDF" flow
+    printPDF();
+  }finally{
+    area.classList.remove("show");
+    btn.disabled=false; btn.textContent=label;
+  }
 }
 
 function updateProgress(){

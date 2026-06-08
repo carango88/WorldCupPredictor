@@ -118,6 +118,9 @@
   .match-wrap + .match-wrap{border-top:1px solid rgba(39,52,79,.45)}
   .match-meta{font-size:10px;color:var(--muted);text-align:center;margin-bottom:3px;
     display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+  .match-odds{font-size:9.5px;color:var(--muted);text-align:center;margin-top:4px;
+    display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center}
+  .match-odds b{color:var(--text);font-weight:600}
   .match{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:2px 0}
   .match .home{text-align:right} .match .away{text-align:left}
   .match .tn{font-weight:500;font-size:13.5px}
@@ -368,6 +371,9 @@ const PLAYERS={
  "Panama":[["Ismael Díaz",5,true],["José Fajardo",4,false],["Cecilio Waterman",4,false]]
 };
 
+// Kalshi prediction-market odds — static snapshot (implied %% from order book)
+const KALSHI={"updated": "Jun 08, 2026", "game": {"1": [70, 12, 20], "2": [36, 32, 31], "3": [55, 20, 26], "4": [50, 24, 29], "5": [6, 80, 14], "6": [58, 18, 24], "7": [15, 66, 20], "8": [18, 57, 26], "9": [94, 3, 5], "10": [48, 26, 26], "11": [26, 40, 34], "12": [50, 21, 28], "13": [90, 4, 6], "14": [60, 18, 24], "15": [12, 66, 20], "16": [50, 21, 28], "17": [68, 12, 20], "18": [6, 80, 14], "19": [70, 9, 20], "20": [74, 10, 17], "21": [78, 7, 16], "22": [57, 19, 24], "23": [46, 26, 26], "24": [10, 70, 19], "25": [50, 22, 29], "26": [60, 17, 24], "27": [74, 8, 17], "28": [55, 20, 26], "29": [57, 20, 24], "30": [22, 50, 29], "31": [90, 4, 6], "32": [43, 28, 30], "33": [60, 18, 22], "34": [62, 17, 21], "35": [80, 6, 12], "36": [18, 55, 26], "37": [88, 4, 8], "38": [70, 12, 19], "39": [68, 12, 20], "40": [19, 56, 24], "41": [60, 16, 24], "42": [86, 4, 10], "43": [46, 28, 26], "44": [15, 64, 22], "45": [80, 7, 14], "46": [74, 10, 16], "47": [12, 66, 22], "48": [66, 12, 21], "49": [45, 26, 29], "50": [62, 15, 24], "51": [15, 66, 18], "52": [72, 9, 18], "53": [19, 54, 26], "54": [22, 50, 28], "55": [19, 56, 24], "56": [6, 80, 15], "57": [48, 26, 26], "58": [14, 66, 20], "59": [36, 38, 28], "60": [43, 26, 30], "61": [20, 54, 26], "62": [68, 12, 20], "63": [36, 34, 29], "64": [18, 60, 24], "65": [42, 26, 31], "66": [8, 76, 16], "67": [9, 76, 14], "68": [58, 17, 24], "69": [26, 45, 28], "70": [42, 30, 29], "71": [29, 42, 31], "72": [6, 82, 12]}, "qual": {"Panama": 31, "Ghana": 50, "England": 96, "Croatia": 82, "Uzbekistan": 32, "Colombia": 90, "Portugal": 96, "DR Congo": 42, "Jordan": 19, "Algeria": 66, "Argentina": 96, "Austria": 80, "Senegal": 68, "France": 96, "Norway": 86, "Iraq": 14, "Saudi Arabia": 34, "Cape Verde": 29, "Uruguay": 88, "Spain": 98, "Iran": 62, "Egypt": 74, "New Zealand": 34, "Belgium": 94, "Japan": 78, "Tunisia": 36, "Netherlands": 90, "Sweden": 62, "Cura\u00e7ao": 7, "Ivory Coast": 78, "Ecuador": 88, "Germany": 98, "United States": 82, "Australia": 45, "Paraguay": 64, "T\u00fcrkiye": 80, "Haiti": 10, "Morocco": 86, "Brazil": 98, "Scotland": 68, "Canada": 86, "Qatar": 22, "Switzerland": 94, "Bosnia and Herzegovina": 66, "Mexico": 92, "South Korea": 72, "South Africa": 38, "Czechia": 68}, "boot": [["Kylian Mbappe", 16], ["Harry Kane", 12], ["Erling Haaland", 6], ["Mikel Oyarzabal", 6], ["Lionel Messi", 5], ["Cristiano Ronaldo", 5], ["Julian Alvarez", 4], ["Lamine Yamal", 4], ["Ousmane Dembele", 3], ["Vinicius Junior", 3], ["Raphinha", 3], ["Lautaro Martinez", 2], ["Romelu Lukaku", 2], ["Ferran Torres", 2], ["Matheus Cunha", 2], ["Memphis Depay", 2]]};
+
 // id, matchday(1-3), date, group, home, away
 const MATCHES=[
  [1,1,"Jun 11","A","Mexico","South Africa"],
@@ -479,30 +485,52 @@ function computeGroup(letter){
     else{h.D++;a.D++;h.Pts++;a.Pts++;}
   });
   Object.values(rows).forEach(r=>r.GD=r.GF-r.GA);
-  const arr=Object.values(rows);
-  arr.sort((x,y)=>compareTeams(x,y,groupMatches,rows));
-  return arr;
+  return rankGroup(Object.values(rows),groupMatches);
 }
 
-function compareTeams(x,y,groupMatches,rows){
-  if(y.Pts!==x.Pts)return y.Pts-x.Pts;
-  if(y.GD!==x.GD)return y.GD-x.GD;
-  if(y.GF!==x.GF)return y.GF-x.GF;
-  // head-to-head between the two
-  let xp=0,yp=0,xgd=0,ygd=0;
+// FIFA group ranking: 1) points, 2) GD, 3) goals scored — all over the whole group.
+// For teams level on all three, criteria 4-6 form a MINI-LEAGUE among only the tied teams
+// (points, then GD, then goals scored in the matches between them), re-applied to any still-tied
+// subset. Remaining ties fall to fair play / drawing of lots (we use team name as a deterministic stand-in).
+function miniTable(teamNames,groupMatches){
+  const r={}; teamNames.forEach(t=>r[t]={Pts:0,GD:0,GF:0});
   groupMatches.forEach(m=>{
     const s=getScore(m.id); if(!s)return;
-    const pair=[m.home,m.away];
-    if(pair.includes(x.team)&&pair.includes(y.team)){
-      const xIsHome=m.home===x.team;
-      const xg=xIsHome?s.h:s.a, yg=xIsHome?s.a:s.h;
-      xgd+=xg-yg; ygd+=yg-xg;
-      if(xg>yg)xp+=3;else if(xg<yg)yp+=3;else{xp++;yp++;}
-    }
+    if(!(m.home in r)||!(m.away in r))return; // only matches between the tied teams
+    r[m.home].GF+=s.h; r[m.away].GF+=s.a;
+    r[m.home].GD+=s.h-s.a; r[m.away].GD+=s.a-s.h;
+    if(s.h>s.a)r[m.home].Pts+=3; else if(s.h<s.a)r[m.away].Pts+=3; else {r[m.home].Pts++;r[m.away].Pts++;}
   });
-  if(yp!==xp)return yp-xp;
-  if(ygd!==xgd)return ygd-xgd;
-  return x.team.localeCompare(y.team);
+  return r;
+}
+function breakTie(cluster,groupMatches){
+  const mini=miniTable(cluster,groupMatches);
+  const key=t=>mini[t].Pts+"|"+mini[t].GD+"|"+mini[t].GF;
+  cluster=cluster.slice().sort((a,b)=> mini[b].Pts-mini[a].Pts || mini[b].GD-mini[a].GD || mini[b].GF-mini[a].GF || a.localeCompare(b));
+  const out=[]; let i=0;
+  while(i<cluster.length){
+    let j=i; const k=key(cluster[i]);
+    while(j<cluster.length && key(cluster[j])===k) j++;
+    const sub=cluster.slice(i,j);
+    if(sub.length>1 && sub.length<cluster.length) out.push(...breakTie(sub,groupMatches)); // re-apply to still-tied subset
+    else out.push(...sub); // singleton, or fully tied -> name order (fair play / lots stand-in)
+    i=j;
+  }
+  return out;
+}
+function rankGroup(arr,groupMatches){
+  const byName={}; arr.forEach(r=>byName[r.team]=r);
+  const ovKey=r=>r.Pts+"|"+r.GD+"|"+r.GF;
+  let teams=arr.map(r=>r.team).sort((a,b)=> byName[b].Pts-byName[a].Pts || byName[b].GD-byName[a].GD || byName[b].GF-byName[a].GF || a.localeCompare(b));
+  const out=[]; let i=0;
+  while(i<teams.length){
+    let j=i; const k=ovKey(byName[teams[i]]);
+    while(j<teams.length && ovKey(byName[teams[j]])===k) j++;
+    const cluster=teams.slice(i,j);
+    out.push(...(cluster.length>1?breakTie(cluster,groupMatches):cluster));
+    i=j;
+  }
+  return out.map(t=>byName[t]);
 }
 
 function bestThirds(){
@@ -547,6 +575,8 @@ function scoreInputs(m){
   const info=MATCH_INFO[m.id]||{};
   const temp=cityTemp(info.c,info.t), alt=cityAlt(info.c);
   const meta=info.c?`<div class="match-meta">${m.date} · ${info.t} · 📍 ${info.c} · 🌡 ~${temp}°C · ⛰ ${alt} m</div>`:"";
+  const o=KALSHI.game[m.id];
+  const odds=o?`<div class="match-odds" title="Kalshi implied win probability">📊 <b>${o[0]??"–"}%</b> ${FIFA_CODE[m.home]||m.home} · Draw <b>${o[2]??"–"}%</b> · <b>${o[1]??"–"}%</b> ${FIFA_CODE[m.away]||m.away}</div>`:"";
   return `<div class="match-wrap">
     ${meta}
     <div class="match">
@@ -558,6 +588,7 @@ function scoreInputs(m){
       </div>
       <div class="away">${flag(m.away)}<span class="tn">${m.away}</span></div>
     </div>
+    ${odds}
   </div>`;
 }
 
@@ -686,6 +717,13 @@ const LATER=[
 ];
 const KO_ALL=[...R32,...LATER];
 const KO_BYNUM={}; KO_ALL.forEach(x=>KO_BYNUM[x.m]=x);
+// Visual top→bottom ordering so each match sits between the two it feeds from.
+// The bracket pairings aren't numerically adjacent, so we derive order from the tree.
+function koLeafOrder(m){const x=KO_BYNUM[m];if(!x||(x.a.t!=="w"&&x.a.t!=="l"))return [m];return [...koLeafOrder(x.a.m),...koLeafOrder(x.b.m)];}
+const KO_POS={}; koLeafOrder(104).forEach((n,i)=>KO_POS[n]=i);
+function koPos(m){if(KO_POS[m]!=null)return KO_POS[m];const x=KO_BYNUM[m];return KO_POS[m]=(koPos(x.a.m)+koPos(x.b.m))/2;}
+KO_ALL.forEach(x=>koPos(x.m));
+const koSort=arr=>arr.slice().sort((a,b)=>KO_POS[a.m]-KO_POS[b.m]);
 
 // official venue/date/time for each knockout match (FIFA 2026 schedule). t = local kickoff
 const KO_INFO={
@@ -1377,7 +1415,8 @@ function renderKnockout(){
   }else{
     banner=`<div class="ko-banner">✅ Group stage complete — full bracket resolved.${champ?` Current champion: <b style="color:var(--accent2)">${flag(champ)}${champ}</b> 🏆`:" Enter knockout results to crown a champion. Tied match? Tap <b>P</b> to pick the penalty winner."}</div>`;
   }
-  const r16=LATER.filter(x=>x.r==="R16"), qf=LATER.filter(x=>x.r==="QF"), sf=LATER.filter(x=>x.r==="SF");
+  const r32=koSort(R32);
+  const r16=koSort(LATER.filter(x=>x.r==="R16")), qf=koSort(LATER.filter(x=>x.r==="QF")), sf=koSort(LATER.filter(x=>x.r==="SF"));
   const slotH=140, H=R32.length*slotH; // total bracket body height; feeder spacing = H/16 = slotH
   const round=(title,items,opt)=>{
     opt=opt||{};
@@ -1398,7 +1437,7 @@ function renderKnockout(){
 
   const html=`${banner}
     <div class="bracket-scroll"><div class="bracket">
-      ${round("Round of 32",cards(R32,false),{})}
+      ${round("Round of 32",cards(r32,false),{})}
       ${round("Round of 16",cards(r16,true),{hasIn:true,d:slotH})}
       ${round("Quarter-finals",cards(qf,true),{hasIn:true,d:slotH*2})}
       ${round("Semi-finals",cards(sf,true),{hasIn:true,d:slotH*4})}
@@ -1582,7 +1621,10 @@ function renderGoals(){
 function renderAdvancing(){
   document.getElementById("subtabs").innerHTML="";
   const {res}=resolveKO();
-  const teamRow=(t,n)=>`<div class="adv-team ${t?'':'tbd'}">${n?`<span class="anum">${n}</span>`:''}${t?flag(t)+t:'—'}</div>`;
+  const teamRow=(t,n)=>{
+    const q=t&&KALSHI.qual[t]!=null?`<span class="kq" title="Kalshi: odds to qualify from group">${KALSHI.qual[t]}%</span>`:"";
+    return `<div class="adv-team ${t?'':'tbd'}">${n?`<span class="anum">${n}</span>`:''}<span class="adv-tn">${t?flag(t)+t:'—'}</span>${q}</div>`;
+  };
   const listCol=(title,total,teams)=>{
     const body=teams.length
       ? teams.map((t,i)=>teamRow(t,i+1)).join("")

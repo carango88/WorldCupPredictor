@@ -223,6 +223,12 @@
   #printArea td.tl,#printArea th.tl{text-align:left;white-space:nowrap}
   #printArea tr.q{background:#e9f7ef;font-weight:600}
   .pr-line{margin:1px 0;break-inside:avoid}
+  .pr-mdh{margin:14px 0 4px;font-size:12px;color:#111;display:flex;align-items:baseline;gap:8px}
+  .pr-mdh .cnt{font-size:9px;color:#999;font-weight:400}
+  .pr-sched td.tl{font-size:9.5px}
+  .pr-sched .w{font-weight:700}
+  .pr-sched .rc{font-weight:700;color:#1f7a4d}
+  .pr-sched .rc.tie{color:#999}
   .pr-rgroups{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 20px;margin-top:4px}
   .pr-rgroup{break-inside:avoid;page-break-inside:avoid}
   .pr-rgroup .pr-line{font-size:9.5px;margin:1.5px 0;color:#222;display:flex;align-items:baseline;gap:6px}
@@ -1509,19 +1515,21 @@ function buildPrintReport(){
     </div>`;
   }).join("");
 
-  // --- group stage match results (by group & matchday) ---
-  const resultsHtml=GROUP_LETTERS.map(letter=>{
-    const lines=[1,2,3].map(md=>
-      MATCHES.filter(m=>m.group===letter&&m.md===md).map(m=>{
-        const s=getScore(m.id);
-        const sc=s?`${s.h}–${s.a}`:"–&nbsp;–";
-        const hw=s&&s.h>s.a, aw=s&&s.a>s.h;
-        const code=!s?"":(hw?FIFA_CODE[m.home]:aw?FIFA_CODE[m.away]:"TIE");
-        const codeHtml=code?`<span class="rcode ${code==="TIE"?"tie":""}">${code}</span>`:"";
-        return `<div class="pr-line"><span class="mu"><span class="d">${m.date}</span> <span class="${hw?'w':''}">${m.home}</span> <b>${sc}</b> <span class="${aw?'w':''}">${m.away}</span></span>${codeHtml}</div>`;
-      }).join("")
-    ).join("");
-    return `<div class="pr-rgroup"><h3>Group ${letter}</h3>${lines}</div>`;
+  // --- group stage match results, listed in official match order (1–72), split by matchday so each table fits a page ---
+  const resultsBlocks=[1,2,3].map(md=>{
+    const list=MATCHES.filter(m=>m.md===md).sort((a,b)=>a.id-b.id);
+    const lo=list[0].id, hi=list[list.length-1].id;
+    const rows=list.map(m=>{
+      const s=getScore(m.id);
+      const sc=s?`${s.h}–${s.a}`:"–";
+      const hw=s&&s.h>s.a, aw=s&&s.a>s.h;
+      const code=!s?"":(hw?FIFA_CODE[m.home]:aw?FIFA_CODE[m.away]:"TIE");
+      const info=MATCH_INFO[m.id]||{};
+      return `<tr><td>${m.id}</td><td class="tl">${m.date}</td><td class="tl">${info.t||""}</td><td>${m.group}</td><td class="tl"><span class="${hw?'w':''}">${m.home}</span> vs <span class="${aw?'w':''}">${m.away}</span></td><td><b>${sc}</b></td><td class="rc ${code==="TIE"?"tie":""}">${code}</td></tr>`;
+    }).join("");
+    const head=md===1?`<h2>Group Stage Results</h2>`:"";
+    return `<div class="pdf-block">${head}<h3 class="pr-mdh">Matchday ${md} <span class="cnt">matches ${lo}–${hi}</span></h3>
+      <table class="pr-sched"><thead><tr><th>#</th><th class="tl">Date</th><th class="tl">Time</th><th>Grp</th><th class="tl">Fixture</th><th>Score</th><th>Win</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join("");
 
   // --- best thirds ---
@@ -1596,7 +1604,7 @@ function buildPrintReport(){
       <div class="pr-groups">${groupsHtml}</div>
       <div style="font-size:10px;color:#666;margin-top:6px">✓ = top-2 (advance) · ③ = 3rd place qualifying among best 8</div>
     </div>
-    <div class="pdf-block"><h2>Group Stage Results</h2><div class="pr-rgroups">${resultsHtml}</div></div>
+    ${resultsBlocks}
     <div class="pdf-block"><h2>Best 3rd-placed Teams</h2>${thirdsTable}</div>
     <div class="pdf-block"><h2>Teams Advancing by Round</h2>${advHtml}</div>
     <div class="pdf-block"><h2>Knockout Bracket</h2>${bracketHtml}</div>

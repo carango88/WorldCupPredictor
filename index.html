@@ -243,6 +243,34 @@
     .pr-ko .tbd{color:#999;font-style:italic}
     .pr-champ{margin-top:10px;font-size:14px;font-weight:700}
     .pr-cols{columns:2;column-gap:20px}
+    /* advancing-by-round lists + final standings */
+    .pr-adv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px}
+    .pr-advcol{break-inside:avoid}
+    .pr-advcol h4{margin:0 0 3px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #ddd;padding-bottom:2px}
+    .pr-advcol .cnt{font-size:8.5px;color:#999;font-weight:400}
+    .pr-advlist{font-size:9px;line-height:1.45;columns:2;column-gap:10px}
+    .pr-advlist>div{break-inside:avoid}
+    .pr-advlist .an{display:inline-block;min-width:14px;color:#aaa}
+    .pr-advlist .tbd{color:#999;font-style:italic;columns:1}
+    .pr-standings{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:10px;font-size:12px}
+    .pr-standings .gold{color:#8a7000;font-weight:700}
+    /* drawn bracket */
+    .pr-bracket{break-inside:avoid;page-break-inside:avoid;break-before:page;page-break-before:always}
+    .pb-wrap{display:flex;gap:30px;align-items:stretch;margin-top:4px}
+    .pb-col{display:flex;flex-direction:column;flex:1;min-width:0}
+    .pb-ct{font-size:8px;text-transform:uppercase;letter-spacing:.3px;color:#777;text-align:center;font-weight:700;height:13px;white-space:nowrap}
+    .pb-body{display:flex;flex-direction:column;justify-content:space-around}
+    .pb-cell{position:relative;border:1px solid #b5b5b5;border-radius:4px;background:#fff}
+    .pb-row{display:flex;justify-content:space-between;align-items:center;gap:3px;padding:2px 5px;font-size:9px}
+    .pb-row+.pb-row{border-top:1px solid #ddd}
+    .pb-row.w{background:#e9f7ef;font-weight:700}
+    .pb-tn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pb-sc{font-weight:700;flex-shrink:0}
+    .pb-col:not(:last-child) .pb-cell::after{content:"";position:absolute;top:50%;left:100%;width:15px;height:1px;background:#b5b5b5}
+    .pb-col.in .pbc{position:absolute;right:100%;top:50%;transform:translateY(-50%);width:15px;border-left:1px solid #b5b5b5}
+    .pb-col.in .pbc::after{content:"";position:absolute;top:50%;left:0;right:0;height:1px;background:#b5b5b5}
+    .pb-foot{margin-top:8px;font-size:9px;color:#555}
+    #printArea,#printArea *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
 </style>
 </head>
@@ -1521,6 +1549,42 @@ function buildPrintReport(){
   const r16=LATER.filter(x=>x.r==="R16"),qf=LATER.filter(x=>x.r==="QF"),sf=LATER.filter(x=>x.r==="SF");
   const koHtml=`<div class="pr-cols">${koRound("Round of 32",R32)}${koRound("Round of 16",r16)}${koRound("Quarter-finals",qf)}${koRound("Semi-finals",sf)}${koRound("Third-place play-off",[KO_BYNUM[103]])}${koRound("Final",[KO_BYNUM[104]])}</div>`;
 
+  // --- teams advancing to each round (bracket order) ---
+  const r32o=koSort(R32), r16o=koSort(r16), qfo=koSort(qf), sfo=koSort(sf);
+  const advR32=[]; r32o.forEach(x=>{const r=res[x.m]||{}; if(r.home)advR32.push(r.home); if(r.away)advR32.push(r.away);});
+  const advR16=r32o.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
+  const advQF=r16o.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
+  const advSF=qfo.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
+  const fRunner=res[104]&&res[104].loser, fThird=res[103]&&res[103].winner, fFourth=res[103]&&res[103].loser;
+  const advCol=(title,a,n)=>`<div class="pr-advcol"><h4>${title} <span class="cnt">${a.length}/${n}</span></h4><div class="pr-advlist">${a.length?a.map((t,i)=>`<div><span class="an">${i+1}</span>${t}</div>`).join(""):'<div class="tbd">Not decided yet</div>'}</div></div>`;
+  const advHtml=`<div class="pr-adv">
+      ${advCol("Round of 32",advR32,32)}${advCol("Round of 16",advR16,16)}${advCol("Quarter-finals",advQF,8)}${advCol("Semi-finals",advSF,4)}
+    </div>
+    <div class="pr-standings">
+      <span class="ps gold">🥇 Champion: <b>${champ||"—"}</b></span>
+      <span class="ps">🥈 Runner-up: <b>${fRunner||"—"}</b></span>
+      <span class="ps">🥉 Third place: <b>${fThird||"—"}</b></span>
+      <span class="ps">4th place: <b>${fFourth||"—"}</b></span>
+    </div>`;
+
+  // --- drawn bracket with results (flexbox + connector technique, FIFA 3-letter codes) ---
+  const pbH=620, dFor={R16:pbH/16,QF:pbH/8,SF:pbH/4,Final:pbH/2};
+  const pbCell=(x,round)=>{
+    const r=res[x.m]||{}, s=koScores[x.m]||{};
+    const hs=(s.h??""), as_=(s.a??"");
+    const tie=r.home&&r.away&&hs!==""&&hs!=null&&as_!==""&&as_!=null&&+hs===+as_;
+    const hw=r.winner&&r.home===r.winner&&r.home!==r.away, aw=r.winner&&r.away===r.winner&&r.home!==r.away;
+    const nm=t=>t?(FIFA_CODE[t]||t):"—";
+    const conn=round!=="R32"?`<span class="pbc" style="height:${dFor[round]}px"></span>`:"";
+    const row=(t,sc,win,pen)=>`<div class="pb-row${win?' w':''}"><span class="pb-tn">${nm(t)}${pen?' ᴾ':''}</span><span class="pb-sc">${sc===""||sc==null?"":sc}</span></div>`;
+    return `<div class="pb-cell">${conn}${row(r.home,hs,hw,tie&&s.pen==="h")}${row(r.away,as_,aw,tie&&s.pen==="a")}</div>`;
+  };
+  const pbCol=(title,arr,round,isIn)=>`<div class="pb-col${isIn?' in':''}"><div class="pb-ct">${title}</div><div class="pb-body" style="height:${pbH}px">${arr.map(x=>pbCell(x,round)).join("")}</div></div>`;
+  const bracketHtml=`<div class="pr-bracket"><div class="pb-wrap">
+      ${pbCol("Round of 32",r32o,"R32",false)}${pbCol("Round of 16",r16o,"R16",true)}${pbCol("Quarter-finals",qfo,"QF",true)}${pbCol("Semi-finals",sfo,"SF",true)}${pbCol("Final",[KO_BYNUM[104]],"Final",true)}
+    </div>
+    <div class="pb-foot">🏆 Champion: <b>${champ||"—"}</b> &nbsp;·&nbsp; 🥉 Third place (M103 winner): <b>${fThird||"—"}</b> &nbsp;·&nbsp; ᴾ = won on penalties · codes are FIFA 3-letter</div></div>`;
+
   const done=MATCHES.filter(m=>getScore(m.id)).length;
   return `<div class="pr-head">
       <h1>⚽ FIFA World Cup 2026 — My Prediction</h1>
@@ -1532,7 +1596,9 @@ function buildPrintReport(){
     <h2>Group Stage Results</h2>
     <div class="pr-rgroups">${resultsHtml}</div>
     <h2>Best 3rd-placed Teams</h2>${thirdsTable}
-    <h2>Knockout Stage</h2>${koHtml}
+    <h2>Teams Advancing by Round</h2>${advHtml}
+    <h2>Knockout Bracket</h2>${bracketHtml}
+    <h2>Knockout Results</h2>${koHtml}
     ${champ?`<div class="pr-champ">🏆 Predicted Champion: ${champ}</div>`:""}`;
 }
 

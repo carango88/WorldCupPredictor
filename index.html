@@ -293,6 +293,7 @@
       <button data-view="advancing">🚩 Advancing</button>
       <button data-view="goals">⚽ Goals</button>
     </div>
+    <button class="primary" id="shareBtn" title="Copy a link that contains your full prediction">🔗 Share link</button>
     <button class="primary" id="pdfBtn" title="Download a PDF of your full prediction">⬇ Download PDF</button>
     <button class="danger" id="clearBtn">✕ Clear all</button>
   </div>
@@ -1940,6 +1941,51 @@ document.getElementById("clearBtn").addEventListener("click",()=>{
 });
 
 document.getElementById("pdfBtn").addEventListener("click",savePDF);
+
+/* ===== Shareable snapshot link: encode the whole prediction into the URL ===== */
+function encodeState(){
+  const s={};
+  for(const id in scores){const v=scores[id]; if(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null) s[id]=v.h+"-"+v.a;}
+  const k={};
+  for(const m in koScores){const v=koScores[m]; if(v&&((v.h!==""&&v.h!=null)||(v.a!==""&&v.a!=null)||v.pen)) k[m]=(v.h??"")+"-"+(v.a??"")+(v.pen?"-"+v.pen:"");}
+  const json=JSON.stringify({v:1,s,k});
+  return btoa(unescape(encodeURIComponent(json)));
+}
+function decodeState(str){
+  try{
+    const obj=JSON.parse(decodeURIComponent(escape(atob(str))));
+    if(!obj||obj.v!==1)return null;
+    return obj;
+  }catch(e){return null;}
+}
+function applyState(obj){
+  scores={};
+  for(const id in (obj.s||{})){const [h,a]=obj.s[id].split("-"); scores[id]={h:+h,a:+a};}
+  koScores={};
+  for(const m in (obj.k||{})){const p=obj.k[m].split("-"); koScores[m]={h:p[0]===""?"":+p[0],a:p[1]===""?"":+p[1]}; if(p[2])koScores[m].pen=p[2];}
+  saveScores(); saveKO();
+}
+function shareLink(){
+  const url=location.origin+location.pathname+"#p="+encodeState();
+  const btn=document.getElementById("shareBtn"), label=btn.textContent;
+  const done=ok=>{btn.textContent=ok?"✓ Link copied!":"⚠ Copy failed"; setTimeout(()=>btn.textContent=label,2200);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>done(true)).catch(()=>{prompt("Copy this link to share your prediction:",url);btn.textContent=label;});
+  }else{ prompt("Copy this link to share your prediction:",url); }
+}
+document.getElementById("shareBtn").addEventListener("click",shareLink);
+// On load: if the URL carries a shared prediction, offer to load it (replacing the current one)
+(function importFromLink(){
+  const m=(location.hash||"").match(/[#&]p=([^&]+)/);
+  if(!m)return;
+  const obj=decodeState(m[1]);
+  if(!obj)return;
+  const hasOwn=Object.keys(scores).length||Object.keys(koScores).length;
+  const ok=!hasOwn || confirm("This link contains a shared prediction.\n\nLoad it? This will replace the scores you currently have entered.");
+  if(ok) applyState(obj);
+  // clean the hash so a later refresh keeps your working copy and doesn't re-import
+  history.replaceState(null,"",location.origin+location.pathname);
+})();
 
 renderAll();
 </script>

@@ -1560,7 +1560,14 @@ function buildPrintReport(){
 
   // --- teams advancing to each round (bracket order) ---
   const r32o=koSort(R32), r16o=koSort(r16), qfo=koSort(qf), sfo=koSort(sf);
-  const advR32=[]; r32o.forEach(x=>{const r=res[x.m]||{}; if(r.home)advR32.push(r.home); if(r.away)advR32.push(r.away);});
+  // R32 qualifiers listed by group (A→L): each group's 1st, 2nd, then its 3rd if among the best 8
+  const advR32=[];
+  GROUP_LETTERS.forEach(g=>{
+    const st=computeGroup(g);
+    if(st[0])advR32.push(st[0].team);
+    if(st[1])advR32.push(st[1].team);
+    if(st[2]&&advancing.has(st[2].team))advR32.push(st[2].team);
+  });
   const advR16=r32o.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
   const advQF=r16o.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);
   const advSF=qfo.map(x=>res[x.m]&&res[x.m].winner).filter(Boolean);

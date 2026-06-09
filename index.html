@@ -1943,27 +1943,37 @@ document.getElementById("clearBtn").addEventListener("click",()=>{
 document.getElementById("pdfBtn").addEventListener("click",savePDF);
 
 /* ===== Shareable snapshot link: encode the whole prediction into the URL ===== */
-// Compact, fully URL-safe encoding so the link stays short (~240 chars) and survives WhatsApp/iMessage.
-// Layout: "2" + 72 group matches (2 chars each: home,away in base36, ".." if blank)
-//             + 32 knockout matches (3 chars: home,away,pen['h'|'a'|'.'], "..." if blank)
+// Compact, ALPHANUMERIC-ONLY encoding (no dots/dashes — messaging apps strip trailing punctuation and
+// choke on symbol-heavy URLs). Fixed 241 chars. Layout: "3"
+//   + 72 group matches  (2 chars: home,away in base36 [0-9a-z]; "ZZ"  if blank)
+//   + 32 knockout matches(3 chars: home,away + pen [0=none,1=home,2=away]; "ZZZ" if blank)
 function encodeState(){
   const ch=n=>Math.max(0,Math.min(35,n|0)).toString(36);
   let g="";
   for(let id=1;id<=72;id++){const v=scores[id];
-    g+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a):"..";}
+    g+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a):"ZZ";}
   let k="";
   for(let m=73;m<=104;m++){const v=koScores[m];
-    k+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a)+(v.pen==="h"?"h":v.pen==="a"?"a":"."):"...";}
-  return "2"+g+k;
+    k+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a)+(v.pen==="h"?"1":v.pen==="a"?"2":"0"):"ZZZ";}
+  return "3"+g+k;
 }
 function decodeCompact(str){
-  if(!/^2[0-9a-z.]{240}$/.test(str))return null;
-  const body=str.slice(1), g=body.slice(0,144), k=body.slice(144);
-  const val=c=>c==="."?null:parseInt(c,36);
-  const obj={v:1,s:{},k:{}};
-  for(let i=0;i<72;i++){const h=val(g[2*i]),a=val(g[2*i+1]); if(h!=null&&a!=null)obj.s[i+1]=h+"-"+a;}
-  for(let i=0;i<32;i++){const h=val(k[3*i]),a=val(k[3*i+1]),p=k[3*i+2]; if(h!=null&&a!=null)obj.k[73+i]=h+"-"+a+((p==="h"||p==="a")?"-"+p:"");}
-  return obj;
+  const val=c=>c==="Z"?null:c==="."?null:parseInt(c,36);
+  // v3 — alphanumeric (current)
+  if(/^3[0-9A-Za-z]{240}$/.test(str)){
+    const g=str.slice(1,145), k=str.slice(145), obj={v:1,s:{},k:{}};
+    for(let i=0;i<72;i++){const h=val(g[2*i]),a=val(g[2*i+1]); if(h!=null&&a!=null)obj.s[i+1]=h+"-"+a;}
+    for(let i=0;i<32;i++){const h=val(k[3*i]),a=val(k[3*i+1]),p=k[3*i+2]; if(h!=null&&a!=null)obj.k[73+i]=h+"-"+a+(p==="1"?"-h":p==="2"?"-a":"");}
+    return obj;
+  }
+  // v2 — earlier dot version (so links made today still open)
+  if(/^2[0-9a-z.]{240}$/.test(str)){
+    const g=str.slice(1,145), k=str.slice(145), obj={v:1,s:{},k:{}};
+    for(let i=0;i<72;i++){const h=val(g[2*i]),a=val(g[2*i+1]); if(h!=null&&a!=null)obj.s[i+1]=h+"-"+a;}
+    for(let i=0;i<32;i++){const h=val(k[3*i]),a=val(k[3*i+1]),p=k[3*i+2]; if(h!=null&&a!=null)obj.k[73+i]=h+"-"+a+((p==="h"||p==="a")?"-"+p:"");}
+    return obj;
+  }
+  return null;
 }
 function decodeState(str){
   try{
@@ -1994,7 +2004,7 @@ document.getElementById("shareBtn").addEventListener("click",shareLink);
 // On load: if the URL carries a shared prediction, offer to load it (replacing the current one)
 (function importFromLink(){
   const raw=(location.search||"")+(location.hash||"");
-  const m=raw.match(/[?#&]c=([0-9a-z.]+)/)||raw.match(/[?#&]p=([^&#]+)/); // new compact (?c=) or legacy (#p=)
+  const m=raw.match(/[?#&]c=([0-9A-Za-z.]+)/)||raw.match(/[?#&]p=([^&#]+)/); // compact (?c=) or legacy (#p=)
   if(!m)return;
   const obj=decodeState(m[1]);
   if(!obj)return;

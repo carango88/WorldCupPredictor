@@ -1943,18 +1943,32 @@ document.getElementById("clearBtn").addEventListener("click",()=>{
 document.getElementById("pdfBtn").addEventListener("click",savePDF);
 
 /* ===== Shareable snapshot link: encode the whole prediction into the URL ===== */
+// Compact, fully URL-safe encoding so the link stays short (~240 chars) and survives WhatsApp/iMessage.
+// Layout: "2" + 72 group matches (2 chars each: home,away in base36, ".." if blank)
+//             + 32 knockout matches (3 chars: home,away,pen['h'|'a'|'.'], "..." if blank)
 function encodeState(){
-  const s={};
-  for(const id in scores){const v=scores[id]; if(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null) s[id]=v.h+"-"+v.a;}
-  const k={};
-  for(const m in koScores){const v=koScores[m]; if(v&&((v.h!==""&&v.h!=null)||(v.a!==""&&v.a!=null)||v.pen)) k[m]=(v.h??"")+"-"+(v.a??"")+(v.pen?"-"+v.pen:"");}
-  const json=JSON.stringify({v:1,s,k});
-  // URL-safe base64 (no +, /, = — those get mangled by messaging apps on mobile)
-  return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  const ch=n=>Math.max(0,Math.min(35,n|0)).toString(36);
+  let g="";
+  for(let id=1;id<=72;id++){const v=scores[id];
+    g+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a):"..";}
+  let k="";
+  for(let m=73;m<=104;m++){const v=koScores[m];
+    k+=(v&&v.h!==""&&v.h!=null&&v.a!==""&&v.a!=null)?ch(+v.h)+ch(+v.a)+(v.pen==="h"?"h":v.pen==="a"?"a":"."):"...";}
+  return "2"+g+k;
+}
+function decodeCompact(str){
+  if(!/^2[0-9a-z.]{240}$/.test(str))return null;
+  const body=str.slice(1), g=body.slice(0,144), k=body.slice(144);
+  const val=c=>c==="."?null:parseInt(c,36);
+  const obj={v:1,s:{},k:{}};
+  for(let i=0;i<72;i++){const h=val(g[2*i]),a=val(g[2*i+1]); if(h!=null&&a!=null)obj.s[i+1]=h+"-"+a;}
+  for(let i=0;i<32;i++){const h=val(k[3*i]),a=val(k[3*i+1]),p=k[3*i+2]; if(h!=null&&a!=null)obj.k[73+i]=h+"-"+a+((p==="h"||p==="a")?"-"+p:"");}
+  return obj;
 }
 function decodeState(str){
   try{
-    let b=String(str).replace(/-/g,"+").replace(/_/g,"/").replace(/\s/g,"");
+    const c=decodeCompact(str); if(c)return c;                                // new compact format
+    let b=String(str).replace(/-/g,"+").replace(/_/g,"/").replace(/\s/g,""); // legacy base64 links
     while(b.length%4) b+="=";
     const obj=JSON.parse(decodeURIComponent(escape(atob(b))));
     if(!obj||obj.v!==1)return null;
@@ -1969,7 +1983,7 @@ function applyState(obj){
   saveScores(); saveKO();
 }
 function shareLink(){
-  const url=location.origin+location.pathname+"#p="+encodeState();
+  const url=location.origin+location.pathname+"?c="+encodeState();
   const btn=document.getElementById("shareBtn"), label=btn.textContent;
   const done=ok=>{btn.textContent=ok?"✓ Link copied!":"⚠ Copy failed"; setTimeout(()=>btn.textContent=label,2200);};
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -1979,7 +1993,8 @@ function shareLink(){
 document.getElementById("shareBtn").addEventListener("click",shareLink);
 // On load: if the URL carries a shared prediction, offer to load it (replacing the current one)
 (function importFromLink(){
-  const m=(location.hash||"").match(/[#&]p=([^&]+)/);
+  const raw=(location.search||"")+(location.hash||"");
+  const m=raw.match(/[?#&]c=([0-9a-z.]+)/)||raw.match(/[?#&]p=([^&#]+)/); // new compact (?c=) or legacy (#p=)
   if(!m)return;
   const obj=decodeState(m[1]);
   if(!obj)return;

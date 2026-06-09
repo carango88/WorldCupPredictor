@@ -295,6 +295,8 @@
     </div>
     <button class="primary" id="shareBtn" title="Copy a link that contains your full prediction">🔗 Share link</button>
     <button class="primary" id="pdfBtn" title="Download a PDF of your full prediction">⬇ Download PDF</button>
+    <button class="primary" id="importBtn" title="Upload a prediction PDF (with selectable text) to refill the bracket">📂 Import PDF</button>
+    <input type="file" id="importFile" accept="application/pdf,.pdf" style="display:none">
     <button class="danger" id="clearBtn">✕ Clear all</button>
   </div>
   <div class="legend">
@@ -2001,6 +2003,69 @@ function shareLink(){
   }else{ prompt("Copy this link to share your prediction:",url); }
 }
 document.getElementById("shareBtn").addEventListener("click",shareLink);
+
+/* ===== Import a prediction PDF (re-fill from a PDF saved from this app, if it has selectable text) ===== */
+function parseReportText(text){
+  const norm=text.replace(/\s+/g," ");
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const D="[–\\-]"; // en-dash or hyphen
+  const sNew={}; let groupFound=0;
+  for(const m of MATCHES){
+    const h=esc(m.home), a=esc(m.away);
+    let mm=norm.match(new RegExp(h+"\\s+vs\\s+"+a+"\\s+(\\d{1,2})"+D+"(\\d{1,2})"))   // current "Home vs Away h–a"
+        || norm.match(new RegExp(h+"\\s+(\\d{1,2})"+D+"(\\d{1,2})\\s+"+a));            // older "Home h–a Away"
+    if(mm){ sNew[m.id]={h:+mm[1],a:+mm[2]}; groupFound++; }
+  }
+  const koNew={}, penName={};
+  for(let num=73;num<=104;num++){
+    const idx=norm.indexOf("[M"+num+"]"); if(idx<0)continue;
+    const before=norm.slice(Math.max(0,idx-50),idx);
+    const sm=[...before.matchAll(/(\d{1,2})\s*:\s*(\d{1,2})/g)].pop();
+    if(sm)koNew[num]={h:+sm[1],a:+sm[2]};
+    const pm=norm.slice(idx,idx+60).match(/pens:\s*([^)\]]+?)\s*[)\]]/);
+    if(pm)penName[num]=pm[1].trim();
+  }
+  return {sNew,koNew,penName,groupFound,koFound:Object.keys(koNew).length};
+}
+async function importFromPDF(file){
+  const btn=document.getElementById("importBtn"), label=btn.textContent;
+  btn.disabled=true; btn.textContent="⏳ Reading PDF…";
+  const replaceOK=()=> (!Object.keys(scores).length&&!Object.keys(koScores).length) || confirm("Replace your current entries with the results from this PDF?");
+  try{
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",()=>window.pdfjsLib);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    let text="";
+    for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);const tc=await pg.getTextContent();text+=" "+tc.items.map(i=>i.str).join(" ");}
+    const codeM=text.match(/WC2026:([0-9A-Za-z]+)/);              // future: data embedded by Download PDF
+    if(codeM){const obj=decodeState(codeM[1]); if(obj){ if(replaceOK()){applyState(obj);renderAll();alert("Prediction restored from the PDF.");} return; }}
+    if(text.replace(/\s/g,"").length<60){
+      alert("This PDF has no readable text — it's image-only (e.g. from the one-click Download button or a scan), so scores can't be read from it.\n\nIf you also have a copy saved via the browser's print dialog → \"Save as PDF\", try that one.");
+      return;
+    }
+    const r=parseReportText(text);
+    if(!r.groupFound){ alert("Couldn't find match results in this PDF. Make sure it's a prediction PDF from this app with selectable text."); return; }
+    if(!replaceOK()) return;
+    scores={}; for(const id in r.sNew)scores[id]=r.sNew[id];
+    koScores={}; for(const n in r.koNew)koScores[n]=r.koNew[n];
+    saveScores(); saveKO();
+    try{ const {res}=resolveKO();          // best-effort: map penalty winner names to a side
+      for(const n in r.penName){const rr=res[n]; if(!rr)continue; const nm=r.penName[n];
+        if(rr.home&&(rr.home===nm||rr.home.indexOf(nm)===0||nm.indexOf(rr.home)===0))koScores[n].pen="h";
+        else if(rr.away&&(rr.away===nm||rr.away.indexOf(nm)===0||nm.indexOf(rr.away)===0))koScores[n].pen="a";}
+      saveKO();
+    }catch(_){}
+    renderAll();
+    alert("Loaded "+r.groupFound+"/72 group results"+(r.koFound?" and "+r.koFound+"/32 knockout results":"")+" from the PDF.");
+  }catch(e){
+    alert("Couldn't read this PDF ("+(e&&e.message||e)+").");
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+    document.getElementById("importFile").value="";
+  }
+}
+document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change",e=>{const f=e.target.files&&e.target.files[0]; if(f)importFromPDF(f);});
 // On load: if the URL carries a shared prediction, offer to load it (replacing the current one)
 (function importFromLink(){
   const raw=(location.search||"")+(location.hash||"");
